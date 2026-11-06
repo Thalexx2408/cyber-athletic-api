@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id              Int               @id @default(autoincrement())
+  nomeUsuario     String            @unique
+  email           String            @unique
+  dataNascimento  DateTime
+  fotoPerfil      String?
+  xpTotal         Int               @default(0)
+  criadoEm        DateTime          @default(now())
+
+  // ==========================================
+  // ATRIBUTOS: GAMIFICAÇÃO & RPG
+  // ==========================================
+  cyberCoins      Int               @default(0)        // Moeda virtual para a loja
+  streakAtual     Int               @default(0)        // Dias seguidos (Sistema de Fogo 🔥)
+  ultimoCheckin   DateTime?                            // Registo do último acesso/atividade
+  temaAtivo       String            @default("padrao") // Cor do UI atual (ex: 'padrao', 'magenta', 'ouro')
+
+  // Relações Básicas do Sistema
+  treinos         Treino[]
+  dietas          Dieta[]
+  alarmes         Alarme[]
+  registrosAgua   RegistroAgua[]
+
+  // Sistema de Grupos
+  gruposAdministrados Grupo[] @relation("AdminGrupo")
+  grupos              Grupo[] @relation("MembrosGrupo")
+
+  // Sistema de Amigos
+  amigos          Usuario[] @relation("Amizades")
+  amigosDe        Usuario[] @relation("Amizades")
+
+  // Relações de RPG e Loja
+  missoesDiarias  MissaoDiaria[]
+  inventario      ItemInventario[]
+  conquistas      ConquistaUsuario[]
+  transacoes      HistoricoTransacao[] // NOVO: Histórico de gastos e ganhos
+}
+
+model Grupo {
+  id        Int       @id @default(autoincrement())
+  nome      String
+  descricao String?
+  adminId   Int
+  admin     Usuario   @relation("AdminGrupo", fields: [adminId], references: [id])
+  membros   Usuario[] @relation("MembrosGrupo")
+  criadoEm  DateTime  @default(now())
+}
+
+model Treino {
+  id         Int      @id @default(autoincrement())
+  usuarioId  Int
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id])
+  modalidade String
+  distancia  Float
+  duracao    Int
+  kcal       Int
+  data       DateTime @default(now())
+}
+
+model Dieta {
+  id          Int      @id @default(autoincrement())
+  usuarioId   Int
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
+  alimento    String
+  repeticao   String   @default("nenhuma") 
+  dataHorario DateTime
+  criadoEm    DateTime @default(now())
+}
+
+model Alarme {
+  id        Int      @id @default(autoincrement())
+  usuarioId Int
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+  titulo    String
+  horario   String
+  repeticao String   @default("diariamente")
+}
+
+model RegistroAgua {
+  id         Int      @id @default(autoincrement())
+  usuarioId  Int
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id])
+  quantidade Int      
+  data       DateTime @default(now())
+}
+
+// ==========================================
+// MODELOS: O ECOSSISTEMA DO JOGO
+// ==========================================
+
+model MissaoDiaria {
+  id              Int      @id @default(autoincrement())
+  usuarioId       Int
+  usuario         Usuario  @relation(fields: [usuarioId], references: [id])
+  titulo          String   // Ex: "Correr 3km hoje"
+  tipo            String   // 'treino', 'agua', 'dieta'
+  meta            Float    // Ex: 3.0 (km) ou 2000 (ml)
+  progresso       Float    @default(0)
+  concluida       Boolean  @default(false)
+  recompensaXp    Int
+  recompensaCoins Int
+  data            DateTime @default(now())
+}
+
+model ItemLoja {
+  id          Int      @id @default(autoincrement())
+  nome        String
+  descricao   String
+  preco       Int
+  tipo        String   // 'equipamento', 'tema'
+  valorBonus  Float    // Ex: 1.05 (5% de bónus de XP nos treinos)
+  icone       String
+  inventarios ItemInventario[]
+}
+
+model ItemInventario {
+  id          Int      @id @default(autoincrement())
+  usuarioId   Int
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
+  itemId      Int
+  item        ItemLoja @relation(fields: [itemId], references: [id])
+  equipado    Boolean  @default(false)
+  adquiridoEm DateTime @default(now())
+}
+
+// NOVO: Registo de Auditoria Financeira do Jogo
+model HistoricoTransacao {
+  id          Int      @id @default(autoincrement())
+  usuarioId   Int
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
+  valor       Int      // Pode ser negativo (compra) ou positivo (recompensa)
+  descricao   String   // Ex: "Compra: Tênis de Carbono" ou "Missão Concluída"
+  data        DateTime @default(now())
+}
+
+model Conquista {
+  id             Int      @id @default(autoincrement())
+  nome           String
+  descricao      String
+  icone          String
+  requisitoTipo  String   // 'km_total', 'dias_fogo', 'agua_total'
+  requisitoValor Float
+  usuarios       ConquistaUsuario[]
+}
+
+model ConquistaUsuario {
+  id              Int       @id @default(autoincrement())
+  usuarioId       Int
+  usuario         Usuario   @relation(fields: [usuarioId], references: [id])
+  conquistaId     Int
+  conquista       Conquista @relation(fields: [conquistaId], references: [id])
+  dataDesbloqueio DateTime  @default(now())
+}
