@@ -80,8 +80,11 @@ export default function Dieta() {
       setRepeticao('nenhuma'); 
       carregarHistorico();
       
-    } catch (e) { 
-      Alert.alert("Erro de Rede", "Falha ao conectar."); 
+    } catch (e: any) { 
+      // O feitiço revelador: mostra o erro real do servidor em vez do texto genérico
+      const erroReal = e.response?.data?.error || e.response?.data?.message || e.message;
+      Alert.alert("Erro Real do Servidor", JSON.stringify(erroReal));
+      console.log("ERRO COMPLETO:", e.response?.data || e);
     }
   };
 

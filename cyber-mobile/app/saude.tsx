@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
 import RpgBar from './components/RpgBar'; 
-import api from '../services/api'; 
+import api from '../services/api'; // <-- A IMPORTAÇÃO ESTÁ CORRETA!
 
 const META_AGUA = 2000; 
 const LIMITE_CILINDROS = 15;
@@ -23,14 +23,13 @@ export default function Saude() {
   const [aguaTotal, setAguaTotal] = useState(0); 
   const [dataAgua, setDataAgua] = useState(getDataHoje());
   
-  // NOVO: Estado para alimentar a tabela de hidratação localmente
   const [historicoAgua, setHistoricoAgua] = useState<{horario: string, quantidade: number}[]>([]);
 
   useEffect(() => { 
     carregarAlarmes(); 
     if (dataAgua !== getDataHoje()) {
       setAguaTotal(0); 
-      setHistoricoAgua([]); // Zera o histórico de água no novo dia
+      setHistoricoAgua([]); 
       setDataAgua(getDataHoje());
     }
   }, []);
@@ -81,7 +80,6 @@ export default function Saude() {
         return prev;
       }
 
-      // Adiciona o novo copo à tabela de histórico
       setHistoricoAgua(h => [{ horario: horaStr, quantidade }, ...h]);
       
       return novoTotal > capacidadeMaxima ? capacidadeMaxima : novoTotal;
@@ -98,7 +96,6 @@ export default function Saude() {
 
       <Text style={styles.title}>Saúde & Manutenção</Text>
 
-      {/* ================= SEÇÃO DE HIDRATAÇÃO ================= */}
       <View style={styles.hydroContainer}>
         <Text style={styles.hydroTitle}>Hidratação Diária (Máx: 15)</Text>
         
@@ -129,7 +126,6 @@ export default function Saude() {
           </TouchableOpacity>
         </View>
 
-        {/* NOVA TABELA DE ÁGUA */}
         <View style={[styles.tabelaContainer, { borderColor: '#00BFFF', width: '100%', marginTop: 25 }]}>
           <View style={[styles.tabelaHeader, { borderBottomColor: '#00BFFF' }]}>
             <Text style={[styles.tabelaHeaderText, { flex: 1 }]}>Horário</Text>
@@ -148,7 +144,6 @@ export default function Saude() {
         </View>
       </View>
 
-      {/* ================= SEÇÃO DE PROTOCOLOS ================= */}
       <View style={styles.card}>
         <Text style={[styles.label, { color: '#FF0055', fontSize: 16, marginBottom: 15 }]}>Novo Protocolo (Alarme)</Text>
         <TextInput style={styles.input} placeholder="Ex: Tomar Creatina" placeholderTextColor="#7F8C8D" value={titulo} onChangeText={setTitulo} />
@@ -172,7 +167,6 @@ export default function Saude() {
         </TouchableOpacity>
       </View>
 
-      {/* NOVA TABELA DE PROTOCOLOS/ALARMES */}
       <View style={[styles.tabelaContainer, { borderColor: '#FF0055', marginBottom: 40 }]}>
         <Text style={[styles.title, { fontSize: 18, color: '#FF0055', marginBottom: 15, marginTop: 0 }]}>Protocolos Ativos</Text>
         
@@ -233,7 +227,6 @@ const styles = StyleSheet.create({
   btnSalvar: { backgroundColor: '#FF0055', padding: 15, borderRadius: 10, alignItems: 'center' },
   btnSalvarText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
-  // ESTILOS PADRONIZADOS DAS TABELAS (Semelhantes à Dieta)
   tabelaContainer: { backgroundColor: '#2C2F33', borderRadius: 12, padding: 15, borderWidth: 1 },
   tabelaHeader: { flexDirection: 'row', borderBottomWidth: 2, paddingBottom: 10, marginBottom: 10 },
   tabelaHeaderText: { color: '#B0BEC5', fontSize: 13, fontWeight: 'bold' },

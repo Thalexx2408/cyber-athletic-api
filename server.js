@@ -41,7 +41,7 @@ app.post('/usuarios', async (req, res) => {
     }
     res.status(201).json(usuario);
   } catch (error) {
-    res.status(400).json({ erro: "Erro ao criar/atualizar perfil. E-mail ou Nome de usuário já em uso." });
+    res.status(400).json({ erro: "Erro ao criar/atualizar perfil.", detalhes: error.message });
   }
 });
 
@@ -52,7 +52,7 @@ app.get('/usuarios', async (req, res) => {
     });
     res.json(usuarios);
   } catch (error) {
-    res.status(500).json({ erro: "Erro ao listar usuários da rede." });
+    res.status(500).json({ erro: "Erro ao listar usuários da rede.", detalhes: error.message });
   }
 });
 
@@ -81,7 +81,7 @@ app.get('/usuarios/:id', async (req, res) => {
     if (!usuario) return res.status(404).json({ erro: "Usuário não encontrado." });
     res.json(usuario);
   } catch (error) {
-    res.status(500).json({ erro: "Erro ao buscar usuário." });
+    res.status(500).json({ erro: "Erro ao buscar usuário.", detalhes: error.message });
   }
 });
 
@@ -102,7 +102,7 @@ app.post('/amigos/adicionar', async (req, res) => {
     });
     res.json(atualizado);
   } catch (error) {
-    res.status(400).json({ erro: "Erro ao adicionar amigo." });
+    res.status(400).json({ erro: "Erro ao adicionar amigo.", detalhes: error.message });
   }
 });
 
@@ -123,7 +123,7 @@ app.post('/grupos', async (req, res) => {
     });
     res.status(201).json(novoGrupo);
   } catch (error) {
-    res.status(400).json({ erro: "Erro ao criar grupo." });
+    res.status(400).json({ erro: "Erro ao criar grupo.", detalhes: error.message });
   }
 });
 
@@ -137,7 +137,7 @@ app.get('/grupos/:id', async (req, res) => {
     if (!grupo) return res.status(404).json({ erro: "Grupo não encontrado." });
     res.json(grupo);
   } catch (error) {
-    res.status(500).json({ erro: "Erro ao buscar grupo." });
+    res.status(500).json({ erro: "Erro ao buscar grupo.", detalhes: error.message });
   }
 });
 
@@ -160,7 +160,7 @@ app.put('/grupos/:id', async (req, res) => {
     });
     res.json(grupoAtualizado);
   } catch (error) {
-    res.status(400).json({ erro: "Erro ao atualizar grupo." });
+    res.status(400).json({ erro: "Erro ao atualizar grupo.", detalhes: error.message });
   }
 });
 
@@ -183,7 +183,7 @@ app.put('/grupos/:id/promover', async (req, res) => {
     });
     res.json(grupoAtualizado);
   } catch (error) {
-    res.status(400).json({ erro: "Erro ao promover administrador." });
+    res.status(400).json({ erro: "Erro ao promover administrador.", detalhes: error.message });
   }
 });
 
@@ -210,7 +210,7 @@ app.post('/grupos/adicionar', async (req, res) => {
 
     res.json(grupoAtualizado);
   } catch (error) {
-    res.status(400).json({ erro: "Erro ao adicionar participante." });
+    res.status(400).json({ erro: "Erro ao adicionar participante.", detalhes: error.message });
   }
 });
 
@@ -236,7 +236,7 @@ app.post('/grupos/sair', async (req, res) => {
 
     res.json({ mensagem: "Saiu do grupo com sucesso.", grupo: grupoAtualizado });
   } catch (error) {
-    res.status(400).json({ erro: "Erro ao sair do grupo." });
+    res.status(400).json({ erro: "Erro ao sair do grupo.", detalhes: error.message });
   }
 });
 
@@ -244,6 +244,16 @@ app.post('/grupos/sair', async (req, res) => {
 app.post('/treinos', async (req, res) => {
   try {
     const { usuarioId, modalidade, distancia, duracao, kcal } = req.body;
+    
+    // Assegura que o Utilizador 1 existe antes de salvar (Proteção do Prisma)
+    await prisma.usuario.upsert({
+      where: { id: 1 },
+      update: {},
+      create: {
+        id: 1, nomeUsuario: 'Recruta Cyber', email: 'cyber@tcc.com', dataNascimento: new Date('2000-01-01'), fotoPerfil: '🤖'
+      }
+    });
+
     const novoTreino = await prisma.treino.create({
       data: { usuarioId: Number(usuarioId), modalidade, distancia, duracao, kcal }
     });
@@ -253,7 +263,7 @@ app.post('/treinos', async (req, res) => {
     });
     res.status(201).json(novoTreino);
   } catch (error) {
-    res.status(400).json({ erro: "Erro ao salvar treino." });
+    res.status(400).json({ erro: "Erro ao salvar treino.", detalhes: error.message });
   }
 });
 
@@ -264,17 +274,37 @@ app.get('/treinos', async (req, res) => {
 
 app.post('/dietas', async (req, res) => {
   try {
-    const { usuarioId, alimento, repeticao, dataHorario } = req.body;
-    const novaDieta = await prisma.dieta.create({
-      data: { usuarioId: Number(usuarioId), alimento, repeticao, dataHorario: new Date(dataHorario) }
+    // CORREÇÃO: Aceitar tanto 'horario' quanto 'dataHorario' para compatibilidade total
+    const { usuarioId, alimento, repeticao, dataHorario, horario } = req.body;
+    
+    // Verifica se recebemos 'horario' do App novo ou 'dataHorario' do App antigo
+    const dataHoraFinal = dataHorario || horario; 
+
+    // Assegura que o Utilizador 1 existe antes de salvar (Proteção do Prisma)
+    await prisma.usuario.upsert({
+      where: { id: 1 },
+      update: {},
+      create: {
+        id: 1, nomeUsuario: 'Recruta Cyber', email: 'cyber@tcc.com', dataNascimento: new Date('2000-01-01'), fotoPerfil: '🤖'
+      }
     });
+
+    const novaDieta = await prisma.dieta.create({
+      data: { 
+        usuarioId: Number(usuarioId), 
+        alimento, 
+        repeticao, 
+        dataHorario: new Date(dataHoraFinal) 
+      }
+    });
+    
     await prisma.usuario.update({
       where: { id: Number(usuarioId) },
       data: { xpTotal: { increment: 50 } }
     });
     res.status(201).json(novaDieta);
   } catch (error) {
-    res.status(400).json({ erro: "Erro ao salvar dieta." });
+    res.status(400).json({ erro: "Erro ao salvar dieta.", detalhes: error.message });
   }
 });
 
@@ -292,7 +322,7 @@ app.post('/alarmes', async (req, res) => {
     });
     res.status(201).json(novoAlarme);
   } catch (error) {
-    res.status(400).json({ erro: "Erro ao salvar alarme." });
+    res.status(400).json({ erro: "Erro ao salvar alarme.", detalhes: error.message });
   }
 });
 
@@ -301,7 +331,7 @@ app.get('/alarmes', async (req, res) => {
     const alarmes = await prisma.alarme.findMany();
     res.json(alarmes);
   } catch (error) {
-    res.status(500).json({ erro: "Erro ao buscar alarmes." });
+    res.status(500).json({ erro: "Erro ao buscar alarmes.", detalhes: error.message });
   }
 });
 
@@ -316,7 +346,7 @@ app.get('/ranking/global', async (req, res) => {
     });
     res.json(rankingGlobal);
   } catch (error) {
-    res.status(500).json({ erro: "Erro ao buscar ranking global." });
+    res.status(500).json({ erro: "Erro ao buscar ranking global.", detalhes: error.message });
   }
 });
 
@@ -349,11 +379,11 @@ app.get('/ranking/amigos/:usuarioId', async (req, res) => {
 
     res.json(listaRanking);
   } catch (error) {
-    res.status(500).json({ erro: "Erro ao buscar ranking de amigos." });
+    res.status(500).json({ erro: "Erro ao buscar ranking de amigos.", detalhes: error.message });
   }
 });
 
-const PORT = 3001;
+const PORT = process.env.PORT || 3001; // Ajuste crucial para o Render escolher a porta correta
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Servidor rodando na porta ${PORT} com suporte completo a Perfis, Amigos, Grupos, Alarmes e Rankings.`);
 });
